@@ -1,0 +1,12 @@
+{
+  "Ada · local admin": {
+    "actorId": "member-ada",
+    "teamId": "team-default",
+    "timezone": "Europe/Vienna"
+  },
+  "Grace · team member": {
+    "actorId": "member-grace",
+    "teamId": "team-default",
+    "timezone": "Europe/Vienna"
+  }
+}

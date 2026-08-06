@@ -1,0 +1,41 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "bundler",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2022",
+    "module": "esnext",
+    "lib": ["es2022", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "strict": true,
+    "paths": {
+      "@standup-pulse/shared-contracts": [
+        "./libs/shared/contracts/src/index.ts"
+      ],
+      "@standup-pulse/standups-domain": [
+        "./libs/server/standups-domain/src/index.ts"
+      ],
+      "@standup-pulse/standups-data": [
+        "./libs/server/standups-data/src/index.ts"
+      ],
+      "@standup-pulse/standup-agent": ["./libs/server/agent/src/index.ts"],
+      "@standup-pulse/standup-channels": [
+        "./libs/server/channels/src/index.ts"
+      ],
+      "@standup-pulse/dashboard-data-access": [
+        "./libs/dashboard/data-access/src/index.ts"
+      ],
+      "@standup-pulse/dashboard-ui": ["./libs/dashboard/ui/src/index.ts"],
+      "@standup-pulse/dashboard-feature-pulse": [
+        "./libs/dashboard/feature-pulse/src/index.ts"
+      ]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

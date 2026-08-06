@@ -1,0 +1,26 @@
+{
+  "name": "local-model",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "tools/model",
+  "projectType": "application",
+  "tags": ["scope:model", "type:app"],
+  "targets": {
+    "serve": {
+      "continuous": true,
+      "executor": "nx:run-commands",
+      "defaultConfiguration": "q4",
+      "options": {
+        "command": "bash tools/model/start-local-model.sh q4",
+        "cwd": "{workspaceRoot}"
+      },
+      "configurations": {
+        "q4": {
+          "command": "bash tools/model/start-local-model.sh q4"
+        },
+        "q6": {
+          "command": "bash tools/model/start-local-model.sh q6"
+        }
+      }
+    }
+  }
+}

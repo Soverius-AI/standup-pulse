@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "channels": [
+    {
+      "name": "standup-pulse",
+      "displayName": "Standup Pulse",
+      "providers": {
+        "slack": {
+          "env": {
+            "botToken": "INTELLIGENCE_CHANNEL_STANDUP_PULSE_SLACK_BOT_TOKEN",
+            "signingSecret": "INTELLIGENCE_CHANNEL_STANDUP_PULSE_SLACK_SIGNING_SECRET"
+          }
+        }
+      }
+    }
+  ]
+}

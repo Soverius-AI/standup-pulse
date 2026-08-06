@@ -1,0 +1,9 @@
+{
+  "name": "standups-domain",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/server/standups-domain/src",
+  "projectType": "library",
+  "tags": ["scope:server", "type:domain"],
+  "// targets": "to see all targets run: nx show project standups-domain --web",
+  "targets": {}
+}

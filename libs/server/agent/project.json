@@ -1,0 +1,9 @@
+{
+  "name": "standup-agent",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/server/agent/src",
+  "projectType": "library",
+  "tags": ["scope:server", "type:agent"],
+  "// targets": "to see all targets run: nx show project standup-agent --web",
+  "targets": {}
+}

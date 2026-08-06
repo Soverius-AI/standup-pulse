@@ -1,0 +1,5 @@
+{
+  "name": "@standup-pulse/api",
+  "private": true,
+  "type": "module"
+}
