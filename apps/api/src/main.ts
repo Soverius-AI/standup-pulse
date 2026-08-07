@@ -8,17 +8,19 @@ import {
   SqliteStandupRepository,
   StandupDatabase,
   TrustedActorResolver,
-} from '@standup-pulse/standups-data';
-import { StandupService } from '@standup-pulse/standups-domain';
-import { createApiApp } from './app';
-import { loadDeclaredSlackChannelName } from './channel-config';
-import { createRuntimeIntegration } from './runtime';
-import { SlackNudgeService } from './slack-nudge-service';
+} from './data';
+import { StandupService } from './domain';
+import { loadDeclaredSlackChannelName } from './config/channel-config';
+import { loadServerConfig } from './config/env';
+import { createApiApp } from './http/app';
+import { assertLoopbackHostname } from './loopback-host';
+import { createRuntimeIntegration } from './runtime/runtime-integration';
+import { SlackNudgeService } from './slack/slack-nudge-service';
 
 async function main(): Promise<void> {
-  const database = new StandupDatabase(
-    process.env['STANDUP_DATABASE_PATH'] ?? 'standup-pulse.sqlite',
-  );
+  const config = loadServerConfig();
+  assertLoopbackHostname(config.hostname);
+  const database = new StandupDatabase(config.databasePath);
 
   try {
     seedFixtureData(database.db);
@@ -36,33 +38,61 @@ async function main(): Promise<void> {
       service,
       actorResolver,
     });
-    const nudgeService = await createNudgeService(repository);
+    const nudgeService = config.slackBotToken
+      ? new SlackNudgeService({
+          repository,
+          scope: DEFAULT_TEAM_SCOPE,
+          token: config.slackBotToken,
+        })
+      : undefined;
     const app = createApiApp({
       service,
       database,
       scheduler,
       ...(nudgeService ? { nudgeService } : {}),
-      runtimeStatus: runtime.runtimeStatus,
+      runtimeStatus: () => runtime.runtimeStatus(),
     });
-    app.route('/', runtime.copilotApp);
+    app.all('/api/copilotkit/*', (context) =>
+      runtime.copilotHandler(context.req.raw),
+    );
 
-    await runtime.startChannels();
-
-    const hostname = process.env['HOST'] ?? '127.0.0.1';
-    const port = Number(process.env['PORT'] ?? '3000');
-    const server = serve({ fetch: app.fetch, hostname, port });
+    const server = serve({
+      fetch: app.fetch,
+      hostname: config.hostname,
+      port: config.port,
+    });
     scheduler.start();
+    nudgeService?.start();
 
-    console.log(`Standup Pulse API listening on http://${hostname}:${port}`);
-    console.log(`Managed Channel ${channelName} is online`);
+    console.log(
+      `Standup Pulse API listening on http://${config.hostname}:${config.port}`,
+    );
+    void runtime
+      .startChannels()
+      .then(() => console.log(`Managed Channel ${channelName} is online`))
+      .catch((error: unknown) => {
+        console.warn(
+          `Managed Channel ${channelName} is unavailable; the local API remains online while reconnecting`,
+          {
+            name: error instanceof Error ? error.name : 'UnknownError',
+            message:
+              error instanceof Error
+                ? error.message
+                : 'Unknown Channel startup failure',
+          },
+        );
+      });
 
     let shuttingDown = false;
     async function shutdown(signal: string): Promise<void> {
       if (shuttingDown) return;
       shuttingDown = true;
       console.log(`Stopping Standup Pulse API after ${signal}`);
-      scheduler.stop();
-      await runtime.stopChannels();
+      await Promise.all([
+        scheduler.stop(),
+        nudgeService?.stop(),
+        runtime.stopChannels(),
+      ]);
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
       });
@@ -84,29 +114,6 @@ async function main(): Promise<void> {
   } catch (error) {
     database.close();
     throw error;
-  }
-}
-
-async function createNudgeService(
-  repository: SqliteStandupRepository,
-): Promise<SlackNudgeService | undefined> {
-  const token =
-    process.env['INTELLIGENCE_CHANNEL_STANDUP_PULSE_SLACK_BOT_TOKEN'];
-  if (!token) return undefined;
-
-  const service = new SlackNudgeService({
-    repository,
-    scope: DEFAULT_TEAM_SCOPE,
-    token,
-  });
-  try {
-    await service.initialize();
-    return service;
-  } catch (error) {
-    console.warn('Proactive Slack nudges are unavailable', {
-      name: error instanceof Error ? error.name : 'UnknownError',
-    });
-    return undefined;
   }
 }
 

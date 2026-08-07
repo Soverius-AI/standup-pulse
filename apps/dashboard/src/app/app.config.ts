@@ -6,7 +6,7 @@ import {
 import { provideRouter } from '@angular/router';
 import { provideCopilotKit } from '@copilotkit/angular';
 import { appRoutes } from './app.routes';
-import { STANDUP_COPILOT_CONFIG } from './copilot.config';
+import { STANDUP_COPILOT_CONFIG } from './core/copilot.config';
 
 export const appConfig: ApplicationConfig = {
   providers: [

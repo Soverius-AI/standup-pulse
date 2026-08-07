@@ -1,0 +1,25 @@
+diff --git a/dist/fesm2022/copilotkit-angular.mjs b/dist/fesm2022/copilotkit-angular.mjs
+index 01d29df..2fd45fb 100644
+--- a/dist/fesm2022/copilotkit-angular.mjs
++++ b/dist/fesm2022/copilotkit-angular.mjs
+@@ -1469,7 +1469,8 @@ class CopilotOpenGenerativeUIRenderer {
+         }
+         this.destroyPreviewSandbox();
+         const finalSandboxKey = this.getFinalSandboxKey(state.fullHtml, state.css);
+-        if (!this.sandbox || this.finalSandboxKey !== finalSandboxKey) {
++        if ((!this.sandbox && this.finalSandboxKey === undefined) ||
++            this.finalSandboxKey !== finalSandboxKey) {
+             void this.createFinalSandbox(state.fullHtml, state.css, finalSandboxKey);
+         }
+         this.injectJsFunctions(state.jsFunctions);
+@@ -1492,7 +1493,9 @@ class CopilotOpenGenerativeUIRenderer {
+         const htmlContent = css ? injectCssIntoHtml(fullHtml, css) : fullHtml;
+         try {
+             const Websandbox = await this.loadWebsandbox();
+-            if (!this.containerRef() || this.finalSandboxKey !== finalSandboxKey) {
++            if (!this.containerRef() ||
++                this.sandbox ||
++                this.finalSandboxKey !== finalSandboxKey) {
+                 return;
+             }
+             const sandbox = Websandbox.create(this.createLocalApi(), {

@@ -1,9 +1,0 @@
-{
-  "name": "standup-channels",
-  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/server/channels/src",
-  "projectType": "library",
-  "tags": ["scope:server", "type:channel"],
-  "// targets": "to see all targets run: nx show project standup-channels --web",
-  "targets": {}
-}

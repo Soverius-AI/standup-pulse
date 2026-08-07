@@ -1,0 +1,91 @@
+/* Custom bar chart — the one visual in the dashboard that daisyUI/Tailwind
+   utilities cannot express cleanly. Colors come from the daisyUI theme
+   variables so the chart follows the standup-pulse palette. */
+.participation-chart {
+  position: relative;
+  height: 245px;
+  margin: 4px 18px 18px 46px;
+}
+
+.participation-chart__guide {
+  position: absolute;
+  right: 0;
+  left: 0;
+  border-top: 1px solid var(--color-base-300);
+  color: color-mix(in oklab, var(--color-base-content), transparent 52%);
+  font-size: 0.58rem;
+}
+
+.participation-chart__guide span {
+  position: absolute;
+  top: -9px;
+  left: -38px;
+}
+
+.participation-chart__guide--top {
+  top: 18px;
+}
+.participation-chart__guide--middle {
+  top: 105px;
+}
+.participation-chart__guide--bottom {
+  bottom: 27px;
+}
+
+.participation-chart__bars {
+  position: absolute;
+  inset: 18px 0 26px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(18px, 1fr));
+  align-items: end;
+  gap: 10px;
+}
+
+.participation-chart__column {
+  display: grid;
+  height: 100%;
+  grid-template-rows: 17px 1fr 22px;
+  align-items: end;
+  justify-items: center;
+}
+
+.participation-chart__value,
+.participation-chart__day {
+  color: color-mix(in oklab, var(--color-base-content), transparent 35%);
+  font-size: 0.57rem;
+  font-weight: 650;
+}
+
+.participation-chart__track {
+  position: relative;
+  width: min(22px, 70%);
+  height: 100%;
+  overflow: hidden;
+  border-radius: 6px 6px 2px 2px;
+  background: color-mix(in oklab, var(--color-primary), white 92%);
+}
+
+.participation-chart__bar {
+  position: absolute;
+  inset: auto 0 0;
+  min-height: 4px;
+  border-radius: 6px 6px 2px 2px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-primary), white 10%),
+    color-mix(in oklab, var(--color-primary), white 62%)
+  );
+}
+
+.participation-chart__bar::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: var(--color-primary);
+  content: '';
+  transform: translate(-50%, -25%);
+}

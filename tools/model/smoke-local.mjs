@@ -13,6 +13,7 @@ const baseUrl = (
 ).replace(/\/$/, '');
 const modelId = process.env.LOCAL_LLM_MODEL_ID ?? 'standup-gemma-4-26b-a4b-q4';
 const timeoutMs = Number(process.env.LOCAL_LLM_REQUEST_TIMEOUT_MS ?? 30_000);
+const contextSize = Number(process.env.LOCAL_LLM_CONTEXT_SIZE ?? 131_072);
 
 async function request(url, init) {
   const response = await fetch(url, {
@@ -38,15 +39,19 @@ const propsResponse = await fetch(propsUrl, {
 if (!propsResponse.ok)
   throw new Error(`/props returned ${propsResponse.status}`);
 const props = await propsResponse.json();
+const slots = await request(new URL('slots', serverRoot));
 
 if (health.status !== 'ok')
   throw new Error(`Unexpected health response: ${JSON.stringify(health)}`);
 if (!models.data?.some((model) => model.id === modelId))
   throw new Error(`Model alias ${modelId} is not loaded`);
-if (props.default_generation_settings?.n_ctx !== 16_384) {
+if (props.default_generation_settings?.n_ctx !== contextSize) {
   throw new Error(
-    `Expected a 16384-token context, got ${props.default_generation_settings?.n_ctx}`,
+    `Expected a ${contextSize}-token context, got ${props.default_generation_settings?.n_ctx}`,
   );
+}
+if (!slots.some((slot) => slot.speculative === true)) {
+  throw new Error('MTP speculative decoding is not active');
 }
 
 const completion = await request(`${baseUrl}/chat/completions`, {
@@ -71,7 +76,7 @@ const completion = await request(`${baseUrl}/chat/completions`, {
       },
     ],
     tool_choice: 'auto',
-    temperature: 1,
+    temperature: 0,
     top_p: 0.95,
     top_k: 64,
     parallel_tool_calls: false,

@@ -1,9 +1,0 @@
-{
-  "name": "standups-data",
-  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/server/standups-data/src",
-  "projectType": "library",
-  "tags": ["scope:server", "type:data-access"],
-  "// targets": "to see all targets run: nx show project standups-data --web",
-  "targets": {}
-}

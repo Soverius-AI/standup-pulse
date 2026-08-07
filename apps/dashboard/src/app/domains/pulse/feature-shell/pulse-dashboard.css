@@ -1,0 +1,35 @@
+/* Shell chrome that utilities cannot express: the navy sidebar gradients and
+   the nav-item interaction states (hover must not defeat the active gradient,
+   which class-order-sensitive utilities cannot guarantee). */
+.pulse-sidebar {
+  background:
+    radial-gradient(circle at 30% 8%, rgb(73 82 220 / 28%), transparent 12rem),
+    linear-gradient(180deg, #071d39 0%, #06213f 58%, #082b4b 100%);
+  box-shadow: 8px 0 30px rgb(7 29 57 / 12%);
+}
+
+.pulse-brand-mark {
+  background: linear-gradient(135deg, #6855ec, #4448d9);
+  box-shadow: 0 8px 24px rgb(62 59 205 / 42%);
+}
+
+.pulse-nav-item {
+  color: rgb(255 255 255 / 79%);
+  transition: 150ms ease;
+}
+
+.pulse-nav-item:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 8%);
+}
+
+.pulse-nav-item.pulse-nav-active,
+.pulse-nav-item.pulse-nav-active:hover {
+  color: #fff;
+  background: linear-gradient(
+    110deg,
+    rgb(77 74 207 / 90%),
+    rgb(66 76 210 / 82%)
+  );
+  box-shadow: 0 8px 18px rgb(31 45 146 / 32%);
+}

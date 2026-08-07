@@ -1,5 +1,6 @@
 import {
   IsoDateSchema,
+  NudgeRequestSchema,
   StatusResponseSchema,
   SubmitStandupInputSchema,
   TeamPulseViewModelSchema,
@@ -74,5 +75,23 @@ describe('shared contracts', () => {
         capabilities: { proactiveNudges: false },
       }).capabilities.proactiveNudges,
     ).toBe(false);
+  });
+
+  it('requires bounded, unique, idempotent nudge requests', () => {
+    const request = {
+      date: '2026-08-06',
+      requestId: '5eab8df0-cd51-4d94-9f9f-c18ef89df132',
+      memberIds: ['member-ada'],
+    };
+    expect(NudgeRequestSchema.parse(request)).toEqual(request);
+    expect(() =>
+      NudgeRequestSchema.parse({
+        ...request,
+        memberIds: ['member-ada', 'member-ada'],
+      }),
+    ).toThrow();
+    expect(() =>
+      NudgeRequestSchema.parse({ ...request, requestId: 'not-a-uuid' }),
+    ).toThrow();
   });
 });

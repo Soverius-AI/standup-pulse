@@ -94,7 +94,12 @@ const roster = {
   ],
 };
 
-async function mockDashboardApi(page: Page): Promise<void> {
+type CopilotFixtureMode = 'text' | 'a2ui';
+
+async function mockDashboardApi(
+  page: Page,
+  copilotMode: CopilotFixtureMode = 'text',
+): Promise<void> {
   await page.route('**/api/team-pulse?**', (route) =>
     route.fulfill({
       status: 200,
@@ -116,13 +121,128 @@ async function mockDashboardApi(page: Page): Promise<void> {
       body: JSON.stringify(roster),
     }),
   );
-  await page.route('**/api/copilotkit**', (route) =>
-    route.fulfill({
-      status: 503,
+  await page.route('**/api/copilotkit**', (route) => {
+    const url = new URL(route.request().url());
+
+    if (url.pathname.endsWith('/info')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          version: '1.66.2',
+          agents: {
+            standupDashboard: {
+              name: 'standupDashboard',
+              description: 'E2E Standup Copilot',
+              className: 'StandupDashboardAgent',
+              capabilities: {},
+            },
+          },
+          audioFileTranscriptionEnabled: false,
+          mode: 'sse',
+          threadEndpoints: {
+            list: false,
+            inspect: false,
+            mutations: false,
+            realtimeMetadata: false,
+          },
+          suggestions: true,
+          a2uiEnabled: true,
+          openGenerativeUIEnabled: true,
+        }),
+      });
+    }
+
+    if (url.pathname.endsWith('/agent/standupDashboard/run')) {
+      const request = route.request().postDataJSON() as {
+        threadId?: string;
+        runId?: string;
+      };
+      const threadId = request.threadId ?? 'e2e-thread';
+      const runId = request.runId ?? 'e2e-run';
+      const events =
+        copilotMode === 'a2ui'
+          ? [
+              { type: 'RUN_STARTED', threadId, runId },
+              {
+                type: 'ACTIVITY_SNAPSHOT',
+                messageId: 'a2ui-surface-e2e-a2ui-tool',
+                activityType: 'a2ui-surface',
+                content: {
+                  a2ui_operations: [
+                    {
+                      version: 'v0.9',
+                      createSurface: {
+                        surfaceId: 'e2e-team-pulse',
+                        catalogId:
+                          'https://a2ui.org/specification/v0_9/basic_catalog.json',
+                        theme: {},
+                      },
+                    },
+                    {
+                      version: 'v0.9',
+                      updateComponents: {
+                        surfaceId: 'e2e-team-pulse',
+                        components: [
+                          {
+                            id: 'root',
+                            component: 'Column',
+                            children: ['heading', 'participation'],
+                          },
+                          {
+                            id: 'heading',
+                            component: 'Text',
+                            text: 'Team pulse',
+                            variant: 'h3',
+                          },
+                          {
+                            id: 'participation',
+                            component: 'Text',
+                            text: '75% participation',
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+                replace: true,
+              },
+              { type: 'RUN_FINISHED', threadId, runId },
+            ]
+          : [
+              { type: 'RUN_STARTED', threadId, runId },
+              {
+                type: 'TEXT_MESSAGE_START',
+                messageId: 'e2e-assistant-message',
+                role: 'assistant',
+              },
+              {
+                type: 'TEXT_MESSAGE_CONTENT',
+                messageId: 'e2e-assistant-message',
+                delta: 'Fixture response from Standup Copilot.',
+              },
+              {
+                type: 'TEXT_MESSAGE_END',
+                messageId: 'e2e-assistant-message',
+              },
+              { type: 'RUN_FINISHED', threadId, runId },
+            ];
+      return route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        headers: { 'cache-control': 'no-cache' },
+        body: events
+          .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+          .join(''),
+      });
+    }
+
+    return route.fulfill({
+      status: 404,
       contentType: 'application/json',
-      body: JSON.stringify({ error: 'runtime unavailable in UI fixture' }),
-    }),
-  );
+      body: JSON.stringify({ error: 'Unknown CopilotKit fixture route' }),
+    });
+  });
 }
 
 test('puts missing updates and blockers ahead of analytics', async ({
@@ -154,11 +274,10 @@ test('puts missing updates and blockers ahead of analytics', async ({
   const nudge = page.getByRole('button', { name: 'Nudge missing' });
   await expect(nudge).toBeDisabled();
   await expect(nudge).toHaveAttribute('title', /unavailable/);
-  await expect(
-    page.getByRole('complementary', { name: 'Standup Copilot' }),
-  ).toBeVisible();
+  await expect(page.locator('[data-chat-mounted]')).toHaveCount(1);
+  await expect(page.locator('[data-chat-mounted]')).toBeHidden();
 
-  await page.getByRole('button', { name: 'Team' }).click();
+  await page.getByRole('link', { name: 'Team' }).click();
   await expect(
     page.getByRole('heading', { name: 'Team members' }),
   ).toBeVisible();
@@ -167,11 +286,11 @@ test('puts missing updates and blockers ahead of analytics', async ({
   await expect(page.getByRole('dialog', { name: 'Edit member' })).toBeVisible();
   await page.getByRole('button', { name: 'Cancel' }).click();
 
-  await page.getByRole('button', { name: 'History' }).click();
+  await page.getByRole('link', { name: 'History' }).click();
   await expect(
     page.getByRole('heading', { name: 'Standup history' }),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('link', { name: 'Settings' }).click();
   await expect(
     page.getByRole('heading', { level: 1, name: 'Settings', exact: true }),
   ).toBeVisible();
@@ -182,15 +301,11 @@ test('keeps the dashboard usable on a narrow viewport', async ({ page }) => {
   await mockDashboardApi(page);
   await page.goto('/');
 
-  await page
-    .locator('.pulse-chat__header')
-    .getByRole('button', { name: 'Close Standup Copilot' })
-    .click();
   await page.getByRole('button', { name: 'Open navigation' }).click();
   await expect(
     page.getByRole('navigation', { name: 'Primary navigation' }),
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Today' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Today' })).toBeVisible();
 
   const hasHorizontalOverflow = await page.evaluate(
     () =>
@@ -200,7 +315,7 @@ test('keeps the dashboard usable on a narrow viewport', async ({ page }) => {
   expect(hasHorizontalOverflow).toBe(false);
 });
 
-test('keeps Copilot mounted and contains actions while the side panel is open', async ({
+test('keeps Copilot mounted and preserves composer spacing after a message', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1352, height: 900 });
@@ -209,7 +324,82 @@ test('keeps Copilot mounted and contains actions while the side panel is open', 
 
   const chat = page.locator('[data-chat-mounted]');
   await expect(chat).toHaveCount(1);
+  await page.getByRole('button', { name: 'Copilot' }).click();
   await expect(chat).toBeVisible();
+
+  const chatLayout = await page.evaluate(() => {
+    const panel = document.querySelector<HTMLElement>('.pulse-chat');
+    const input = document.querySelector<HTMLElement>('.copilotKitInput');
+    if (!panel || !input) return null;
+    const panelBounds = panel.getBoundingClientRect();
+    const inputBounds = input.getBoundingClientRect();
+    return {
+      panelLeft: panelBounds.left,
+      panelRight: panelBounds.right,
+      inputLeft: inputBounds.left,
+      inputRight: inputBounds.right,
+      panelOverflows: panel.scrollWidth > panel.clientWidth,
+    };
+  });
+  expect(chatLayout).not.toBeNull();
+  expect(chatLayout?.inputLeft).toBeGreaterThanOrEqual(
+    chatLayout?.panelLeft ?? 0,
+  );
+  expect(chatLayout?.inputRight).toBeLessThanOrEqual(
+    chatLayout?.panelRight ?? 0,
+  );
+  expect(chatLayout?.panelOverflows).toBe(false);
+
+  const composer = page.locator('textarea[copilotChatTextarea]');
+  await expect(composer).toBeEnabled();
+  await composer.fill('Give me a short team pulse.');
+  await composer.press('Enter');
+  await expect(
+    page.getByText('Fixture response from Standup Copilot.'),
+  ).toBeVisible();
+  await page.waitForFunction(() =>
+    document
+      .querySelector<HTMLElement>('.pulse-chat__body')
+      ?.style.getPropertyValue('--pulse-chat-composer-reserve')
+      .endsWith('px'),
+  );
+
+  const postMessageLayout = await page.evaluate(() => {
+    const body = document.querySelector<HTMLElement>('.pulse-chat__body');
+    const input = document.querySelector<HTMLElement>('.copilotKitInput');
+    const scrollContent = document.querySelector<HTMLElement>(
+      "copilot-chat-view-scroll-view [style*='padding-bottom']",
+    );
+    const assistantMessage = Array.from(
+      document.querySelectorAll<HTMLElement>('copilot-chat-assistant-message'),
+    ).at(-1);
+    if (!body || !input || !scrollContent || !assistantMessage) return null;
+
+    const bodyBounds = body.getBoundingClientRect();
+    const inputBounds = input.getBoundingClientRect();
+    const messageBounds = assistantMessage.getBoundingClientRect();
+    return {
+      actualReserve: Number.parseFloat(
+        body.style.getPropertyValue('--pulse-chat-composer-reserve'),
+      ),
+      expectedReserve: Math.ceil(bodyBounds.bottom - inputBounds.top + 16),
+      appliedPadding: Number.parseFloat(
+        getComputedStyle(scrollContent).paddingBottom,
+      ),
+      messageBottom: messageBounds.bottom,
+      inputTop: inputBounds.top,
+    };
+  });
+  expect(postMessageLayout).not.toBeNull();
+  expect(postMessageLayout?.actualReserve).toBe(
+    postMessageLayout?.expectedReserve,
+  );
+  expect(postMessageLayout?.appliedPadding).toBe(
+    postMessageLayout?.actualReserve,
+  );
+  expect(postMessageLayout?.messageBottom).toBeLessThanOrEqual(
+    postMessageLayout?.inputTop ?? 0,
+  );
 
   const hasHorizontalOverflow = await page.evaluate(
     () =>
@@ -234,4 +424,27 @@ test('keeps Copilot mounted and contains actions while the side panel is open', 
   await page.getByRole('button', { name: 'Copilot' }).click();
   await expect(chat).toBeVisible();
   await expect(chat).toHaveCount(1);
+});
+
+test('renders one model-generated A2UI activity surface', async ({
+  page,
+}) => {
+  await mockDashboardApi(page, 'a2ui');
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'Copilot' }).click();
+  const composer = page.locator('textarea[copilotChatTextarea]');
+  await composer.fill("Show today's team pulse visually.");
+  await composer.press('Enter');
+
+  await expect(
+    page.locator('[data-testid="a2ui-activity-surface-scroll"]'),
+  ).toHaveCount(1);
+  await expect(page.locator('[data-testid="a2ui-tool-surface"]')).toHaveCount(
+    0,
+  );
+  await expect(page.getByText('75% participation')).toBeVisible();
+  await expect(page.locator('copilot-open-generative-ui-renderer')).toHaveCount(
+    0,
+  );
 });

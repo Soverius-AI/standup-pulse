@@ -68,4 +68,7 @@ Thumbs.db
 
 __screenshots__/
 
+# local blog drafts (not part of the repo)
+/blog/
+
 vitest.config.*.timestamp*

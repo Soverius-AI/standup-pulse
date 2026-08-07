@@ -13,7 +13,8 @@
         "platform": "node",
         "outputPath": "dist/apps/api",
         "format": ["esm"],
-        "bundle": false,
+        "bundle": true,
+        "thirdParty": false,
         "main": "apps/api/src/main.ts",
         "tsConfig": "apps/api/tsconfig.app.json",
         "assets": ["apps/api/src/assets"],
@@ -49,30 +50,33 @@
         "buildTarget": "build"
       }
     },
-    "copy-workspace-modules": {
-      "dependsOn": ["build"],
-      "cache": true,
-      "outputs": ["{workspaceRoot}/dist/apps/api/workspace_modules"],
-      "executor": "@nx/js:copy-workspace-modules",
-      "options": {
-        "buildTarget": "build"
-      }
-    },
     "prune": {
-      "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
+      "dependsOn": ["prune-lockfile"],
       "executor": "nx:noop"
     },
-    "serve": {
+    "studio": {
       "continuous": true,
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm exec tsx --tsconfig tsconfig.base.json apps/api/src/main.ts",
+        "command": "pnpm exec mastra dev --dir apps/api/src/studio/mastra --env .env --request-context-presets apps/api/request-context-presets.json",
         "cwd": "{workspaceRoot}"
       }
     },
-    "test": {
+    "serve": {
+      "continuous": true,
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
       "options": {
-        "passWithNoTests": true
+        "buildTarget": "api:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "api:build:development"
+        },
+        "production": {
+          "buildTarget": "api:build:production"
+        }
       }
     }
   }

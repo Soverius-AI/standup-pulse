@@ -1,11 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { CopilotChat, provideCopilotKit } from '@copilotkit/angular';
+import { PulseApiClient } from './domains/pulse/data/pulse-api.client';
+import { PulseStore } from './domains/pulse/data/pulse.store';
 import {
-  PulseApiClient,
-  PulseStore,
-} from '@standup-pulse/dashboard-data-access';
-import {
+  IsoDateSchema,
   StatusResponse,
   TeamPulseViewModel,
 } from '@standup-pulse/shared-contracts';
@@ -13,7 +12,7 @@ import { of } from 'rxjs';
 
 const emptyPulse: TeamPulseViewModel = {
   team: { id: 'team-1', name: 'Product Team', timeZone: 'Europe/Vienna' },
-  date: '2026-08-06',
+  date: IsoDateSchema.parse('2026-08-06'),
   generatedAt: '2026-08-06T09:00:00+02:00',
   totals: { roster: 0, posted: 0, missing: 0, blocked: 0, participationPct: 0 },
   deltas: { posted: 0, missing: 0, blocked: 0, participationPoints: 0 },
@@ -61,7 +60,9 @@ describe('Angular 22 compatibility', () => {
     }).compileComponents();
 
     const fixture = TestBed.createComponent(Angular22CompatibilityHost);
-    fixture.componentInstance.store.loadForDate('2026-08-06');
+    fixture.componentInstance.store.loadForDate(
+      IsoDateSchema.parse('2026-08-06'),
+    );
     await fixture.whenStable();
 
     const host = fixture.nativeElement as HTMLElement;

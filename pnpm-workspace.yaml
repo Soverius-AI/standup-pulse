@@ -1,7 +1,10 @@
 autoInstallPeers: true
 strictPeerDependencies: true
 overrides:
+  '@ag-ui/client': 0.0.57
   postcss: 8.5.26
+patchedDependencies:
+  '@copilotkit/angular@0.3.1': patches/@copilotkit__angular@0.3.1.patch
 allowBuilds:
   '@parcel/watcher': true
   '@scarf/scarf': false
